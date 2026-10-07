@@ -22,6 +22,7 @@ from matplotlib.figure import Figure
 
 from model import MLP
 from pid import PID
+from hybrid import HybridController
 
 FPS_MS = 16          # 约 60Hz 刷新
 RENDER_W, RENDER_H = 520, 380
@@ -50,6 +51,9 @@ class Dashboard:
         self.mlp.load("model_motor.npz")
         # 加大积分增益：演示 PID 靠积分抵消重力/负载稳态误差
         self.pid = PID(ki=2.0)
+        # 混合控制器：MLP 前馈(0.7) + 小增益 PID 兜底(0.3)
+        self.hybrid = HybridController(self.mlp)
+        self.hybrid_on = False   # 红臂使用 纯MLP / 混合 模式开关
 
         self.running = False
         self.gravity_on = False   # 重力开关（下拉力矩）
@@ -76,7 +80,12 @@ class Dashboard:
         # 左上：渲染画面
         self.canvas = tk.Canvas(self.root, width=RENDER_W, height=RENDER_H, bg="#10151c")
         self.canvas.grid(row=1, column=0, padx=8, pady=8)
-        tk.Label(self.root, text="蓝臂 = PID 老师    红臂 = MLP 学生",
+        # 鼠标交互：左键拖拽旋转视角，滚轮缩放
+        self._last_mouse = None
+        self.canvas.bind("<ButtonPress-1>", lambda e: setattr(self, "_last_mouse", (e.x, e.y)))
+        self.canvas.bind("<B1-Motion>", self._on_drag)
+        self.canvas.bind("<MouseWheel>", self._on_wheel)
+        tk.Label(self.root, text="蓝臂 = PID 老师    红臂 = MLP 学生    左键拖拽转视角 | 滚轮缩放",
                  bg="#10151c", fg="#e6edf3").grid(row=1, column=0, sticky="s", pady=(0, 14))
 
         # 左下：实时曲线
@@ -113,6 +122,9 @@ class Dashboard:
         self.btn_gravity.grid(row=5, column=0, sticky="ew", padx=(0, 4), pady=(0, 6))
         self.btn_load = ttk.Button(panel, text="负载：关", command=self._toggle_load)
         self.btn_load.grid(row=5, column=1, sticky="ew", padx=(4, 0), pady=(0, 6))
+        # 混合控制开关：红臂 = 纯MLP / MLP前馈+小PID
+        self.btn_hybrid = ttk.Button(panel, text="红臂：纯 MLP（切混合）", command=self._toggle_hybrid)
+        self.btn_hybrid.grid(row=6, column=0, columnspan=2, sticky="ew", pady=(0, 6))
 
         # 状态表
         status = ttk.LabelFrame(self.root, text="实时状态", padding=10)
@@ -145,6 +157,20 @@ class Dashboard:
         ax.grid(True, color="#30363d", lw=0.4)
 
     # ---------- 仿真逻辑 ----------
+    def _on_drag(self, event):
+        """左键拖拽：水平改方位角，垂直改俯仰角。"""
+        if self._last_mouse is None:
+            return
+        dx = event.x - self._last_mouse[0]
+        dy = event.y - self._last_mouse[1]
+        self.camera.azimuth += dx * 0.5
+        self.camera.elevation = max(-89, min(89, self.camera.elevation - dy * 0.5))
+        self._last_mouse = (event.x, event.y)
+
+    def _on_wheel(self, event):
+        """滚轮缩放相机距离。"""
+        self.camera.distance = max(0.5, min(8.0, self.camera.distance * (0.9 if event.delta > 0 else 1.1)))
+
     def _toggle(self):
         self.running = not self.running
         self.btn_start.config(text="暂停" if self.running else "启动")
@@ -159,6 +185,17 @@ class Dashboard:
         self.load_on = not self.load_on
         self.btn_load.config(text=f"负载：{'开' if self.load_on else '关'}")
         self.hint.set(f"额外负载已{'挂上' if self.load_on else '取下'}（再 -0.3 N·m）")
+
+    def _toggle_hybrid(self):
+        """红臂切换：纯 MLP 学生 / MLP 前馈 + 小增益 PID 兜底的混合控制。"""
+        self.hybrid_on = not self.hybrid_on
+        self.hybrid.reset()
+        if self.hybrid_on:
+            self.btn_hybrid.config(text="红臂：混合（切纯 MLP）")
+            self.hint.set("混合模式：τ = 0.7·MLP前馈 + 小增益PID兜底——开重力看 PID 把稳态误差清零")
+        else:
+            self.btn_hybrid.config(text="红臂：纯 MLP（切混合）")
+            self.hint.set("红臂已切回纯 MLP 学生模式")
 
     def _toggle_pid_view(self):
         """隐藏/显示蓝臂（PID 老师），验证红臂不依赖蓝臂也能独立工作。
@@ -176,6 +213,7 @@ class Dashboard:
         self.data.qvel[:] = 0.0
         mujoco.mj_forward(self.model, self.data)
         self.pid.reset()
+        self.hybrid.reset()
         for k in self.hist:
             self.hist[k][:] = np.nan
         self.step_count = 0
@@ -204,8 +242,11 @@ class Dashboard:
         th_m, om_m = self.data.qpos[1], self.data.qvel[1]
 
         u_pid = self.pid.control(th_p, om_p, tg)
-        u_mlp = float(self.mlp.forward(
-            np.array([[th_m, om_m, tg]], dtype=np.float32))[0][0, 0])
+        if self.hybrid_on:
+            u_mlp = self.hybrid.control(th_m, om_m, tg, dt=FPS_MS / 1000)
+        else:
+            u_mlp = float(self.mlp.forward(
+                np.array([[th_m, om_m, tg]], dtype=np.float32))[0][0, 0])
 
         self.data.ctrl[0] = np.clip(u_pid, -1, 1)
         self.data.ctrl[1] = np.clip(u_mlp, -1, 1)
