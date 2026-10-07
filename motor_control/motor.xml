@@ -1,0 +1,18 @@
+<mujoco>
+  <compiler angle="radian"/>
+  <option timestep="0.01" gravity="0 0 0"/>
+  <worldbody>
+    <!-- 底座，避免悬空；顶面低于 z=0.05，不挡旋转臂 -->
+    <body name="pedestal" pos="0 0 -0.15">
+      <geom type="cylinder" size="0.08 0.15" rgba="0.3 0.3 0.3 1"/>
+    </body>
+    <body name="arm" pos="0 0 0.1">
+      <joint name="motor" type="hinge" axis="0 0 1"
+             damping="0.5" range="-3.14 3.14" limited="true"/>
+      <geom type="capsule" fromto="0 0 0 0.5 0 0" size="0.05" density="200" rgba="0.8 0.2 0.2 1"/>
+    </body>
+  </worldbody>
+  <actuator>
+    <motor joint="motor" ctrlrange="-1 1" gear="1"/>
+  </actuator>
+</mujoco>

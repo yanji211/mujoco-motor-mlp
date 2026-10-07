@@ -1,0 +1,25 @@
+<mujoco>
+  <compiler angle="radian"/>
+  <option timestep="0.01" gravity="0 0 0"/>
+  <worldbody>
+    <body name="pedestal" pos="0 0 -0.15">
+      <geom type="cylinder" size="0.08 0.15" rgba="0.3 0.3 0.3 1"/>
+    </body>
+    <!-- 蓝臂：PID 老师控制 -->
+    <body name="arm_pid" pos="0 0 0.1">
+      <joint name="joint_pid" type="hinge" axis="0 0 1"
+             damping="0.5" range="-3.14 3.14" limited="true"/>
+      <geom type="capsule" fromto="0 0 0 0.5 0 0" size="0.05" density="200" rgba="0.2 0.6 1 1"/>
+    </body>
+    <!-- 红臂：训练出的 MLP 控制 -->
+    <body name="arm_mlp" pos="0 0.7 0.1">
+      <joint name="joint_mlp" type="hinge" axis="0 0 1"
+             damping="0.5" range="-3.14 3.14" limited="true"/>
+      <geom type="capsule" fromto="0 0 0 0.5 0 0" size="0.05" density="200" rgba="0.8 0.2 0.2 1"/>
+    </body>
+  </worldbody>
+  <actuator>
+    <motor joint="joint_pid" ctrlrange="-1 1" gear="1"/>
+    <motor joint="joint_mlp" ctrlrange="-1 1" gear="1"/>
+  </actuator>
+</mujoco>
