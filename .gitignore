@@ -1,5 +1,6 @@
 __pycache__/
 *.pyc
 motor_control/data/
+dexterous_hand/data/
 *.log
 *.html

@@ -1,0 +1,74 @@
+<mujoco>
+  <compiler angle="radian"/>
+  <option timestep="0.01" gravity="0 0 0"/>
+
+  <default>
+    <joint damping="0.5" limited="true"/>
+    <geom density="200"/>
+  </default>
+
+  <worldbody>
+    <!-- 肩座 -->
+    <body name="pedestal" pos="0 0 -0.15">
+      <geom type="cylinder" size="0.1 0.15" rgba="0.3 0.3 0.3 1"/>
+    </body>
+
+    <!-- 大臂：肩关节绕 z 轴旋转（水平摆动） -->
+    <body name="upper_arm" pos="0 0 0.1">
+      <joint name="shoulder" type="hinge" axis="0 0 1" range="-2.5 2.5"/>
+      <geom type="capsule" fromto="0 0 0 0.35 0 0" size="0.045" rgba="0.8 0.2 0.2 1"/>
+
+      <!-- 小臂：肘关节绕 y 轴弯曲（上下抬） -->
+      <body name="forearm" pos="0.35 0 0">
+        <joint name="elbow" type="hinge" axis="0 1 0" range="-2.0 1.2"/>
+        <geom type="capsule" fromto="0 0 0 0.3 0 0" size="0.04" rgba="0.2 0.5 0.8 1"/>
+
+        <!-- 手掌 -->
+        <body name="palm" pos="0.3 0 0">
+          <geom type="box" size="0.04 0.05 0.02" rgba="0.9 0.9 0.9 1"/>
+
+          <!-- 食指 -->
+          <body name="finger_index" pos="0.04 -0.0375 0">
+            <joint name="finger_index" type="hinge" axis="0 1 0" range="-1.8 0.3" damping="0.2"/>
+            <geom type="capsule" fromto="0 0 0 0.065 0 0" size="0.012" rgba="0.9 0.7 0.4 1"/>
+          </body>
+          <!-- 中指 -->
+          <body name="finger_middle" pos="0.04 -0.0125 0">
+            <joint name="finger_middle" type="hinge" axis="0 1 0" range="-1.8 0.3" damping="0.2"/>
+            <geom type="capsule" fromto="0 0 0 0.075 0 0" size="0.012" rgba="0.9 0.75 0.45 1"/>
+          </body>
+          <!-- 无名指 -->
+          <body name="finger_ring" pos="0.04 0.0125 0">
+            <joint name="finger_ring" type="hinge" axis="0 1 0" range="-1.8 0.3" damping="0.2"/>
+            <geom type="capsule" fromto="0 0 0 0.065 0 0" size="0.012" rgba="0.9 0.7 0.4 1"/>
+          </body>
+          <!-- 小指 -->
+          <body name="finger_pinky" pos="0.04 0.0375 0">
+            <joint name="finger_pinky" type="hinge" axis="0 1 0" range="-1.8 0.3" damping="0.2"/>
+            <geom type="capsule" fromto="0 0 0 0.05 0 0" size="0.011" rgba="0.9 0.65 0.35 1"/>
+          </body>
+          <!-- 拇指：绕 z 轴对掌，正向摆过掌心与四指对捏 -->
+          <body name="thumb" pos="0.03 -0.05 0.01">
+            <joint name="thumb" type="hinge" axis="0 0 1" range="-0.3 1.8" damping="0.2"/>
+            <geom type="capsule" fromto="0 0 0 0 -0.06 0" size="0.014" rgba="0.95 0.75 0.5 1"/>
+          </body>
+        </body>
+      </body>
+    </body>
+
+    <!-- 抓取目标：一个小方块（静止，不参与训练） -->
+    <body name="target_box" pos="0.55 0.0 0.02">
+      <geom type="box" size="0.03 0.03 0.03" rgba="0.3 0.8 0.3 0.5" contype="0" conaffinity="0"/>
+    </body>
+  </worldbody>
+
+  <actuator>
+    <motor joint="shoulder"      ctrlrange="-1 1" gear="3.0"/>
+    <motor joint="elbow"         ctrlrange="-1 1" gear="1.5"/>
+    <motor joint="finger_index"  ctrlrange="-1 1" gear="0.5"/>
+    <motor joint="finger_middle" ctrlrange="-1 1" gear="0.5"/>
+    <motor joint="finger_ring"   ctrlrange="-1 1" gear="0.5"/>
+    <motor joint="finger_pinky"  ctrlrange="-1 1" gear="0.5"/>
+    <motor joint="thumb"         ctrlrange="-1 1" gear="0.6"/>
+  </actuator>
+</mujoco>

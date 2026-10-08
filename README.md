@@ -67,6 +67,24 @@ motor_control/
 3. 换 PPO 强化学习从头学（不再依赖 PID 老师）
 4. `hybrid.export_c_header()` 导出权重 → 烧 STM32 驱动真实伺服（Sim2Real）
 
+## 灵巧手（dexterous_hand/）
+
+在 `hand.xml`（单段手指，只能根部转动，不算灵巧）之上重做的 **14 自由度灵巧手**：
+肩 + 肘 + 双自由度腕（屈伸/偏摆）+ 掌，**四指各 MCP+PIP 两节可弯曲、拇指可外展对捏**。
+沿用「PID 老师 → 行为克隆 MLP」范式，并加了 **MLP 前馈 + PID 残差混合控制器**（纯前馈在"全零目标"区有稳态偏移，混合把残差清零）。
+
+- 训练 loss 0.066 → **0.00298**；混合控制器 4 种手势平均最大稳态误差 **0.069 rad（≈4°）**，与 PID 老师持平。
+- 运行：
+  ```bash
+  cd dexterous_hand
+  py -3 generate_data_dex.py   # 生成 100 万条 (42维→14维) 数据
+  py -3 train_dex.py           # 训练 MLP 42→256→256→14 -> model_dex.npz
+  py -3 verify_dex.py          # PID / 纯MLP / 混合 三路稳态误差对比
+  py -3 render_dex_demo.py     # 无头渲染 open→抓握→捏合 GIF（证明能运动）
+  py -3 test_visual_dex.py     # 本机 tkinter 中文仪表盘（需显示器）
+  ```
+- 文件：`dexterous_hand.xml` 模型；`dex_common.py` 参数/手势；`generate_data_dex.py`/`train_dex.py`/`verify_dex.py`/`hybrid_dex.py`/`render_dex_demo.py`/`test_visual_dex.py`；`dex_demo_{pid,mlp,hybrid}.gif` 运动演示。
+
 ## License
 
 MIT

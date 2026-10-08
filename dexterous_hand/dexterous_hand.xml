@@ -1,0 +1,120 @@
+<mujoco>
+  <!-- 14 自由度灵巧手：肩(1)+肘(1)+腕(2:屈伸/偏摆)+掌，四指各 MCP+PIP 两节可弯，拇指外展+屈曲对捏 -->
+  <compiler angle="radian"/>
+  <option timestep="0.01" gravity="0 0 0"/>
+  <visual>
+    <global offwidth="1280" offheight="960"/>
+  </visual>
+
+  <default>
+    <joint damping="0.5" limited="true"/>
+    <geom density="200" contype="1" conaffinity="1"/>
+  </default>
+
+  <worldbody>
+    <!-- 肩座 -->
+    <body name="pedestal" pos="0 0 -0.15">
+      <geom type="cylinder" size="0.1 0.15" rgba="0.3 0.3 0.3 1"/>
+    </body>
+
+    <!-- 大臂：肩关节绕 z 轴水平摆动 -->
+    <body name="upper_arm" pos="0 0 0.1">
+      <joint name="shoulder" type="hinge" axis="0 0 1" range="-2.5 2.5"/>
+      <geom type="capsule" fromto="0 0 0 0.35 0 0" size="0.045" rgba="0.8 0.2 0.2 1"/>
+
+      <!-- 小臂：肘关节绕 y 轴弯曲 -->
+      <body name="forearm" pos="0.35 0 0">
+        <joint name="elbow" type="hinge" axis="0 1 0" range="-2.0 1.2"/>
+        <geom type="capsule" fromto="0 0 0 0.3 0 0" size="0.04" rgba="0.2 0.5 0.8 1"/>
+
+        <!-- 腕：屈伸(wrist_flex 绕 y) + 偏摆(wrist_dev 绕 z) -->
+        <body name="wrist_flex" pos="0.3 0 0">
+          <joint name="wrist_flex" type="hinge" axis="0 1 0" range="-1.0 1.0" damping="0.3"/>
+          <geom type="sphere" size="0.001" contype="0" conaffinity="0" rgba="0 0 0 0"/>
+          <body name="wrist_dev" pos="0 0 0">
+            <joint name="wrist_dev" type="hinge" axis="0 0 1" range="-0.6 0.6" damping="0.3"/>
+            <geom type="sphere" size="0.001" contype="0" conaffinity="0" rgba="0 0 0 0"/>
+
+            <!-- 手掌 -->
+            <body name="palm" pos="0.06 0 0">
+              <geom type="box" size="0.05 0.06 0.025" rgba="0.9 0.9 0.9 1"/>
+
+              <!-- 抓取道具：掌中球（不参与碰撞，纯视觉，证明手指能包住它） -->
+              <body name="prop_ball" pos="0.06 0 0.0">
+                <geom type="sphere" size="0.035" rgba="0.3 0.8 0.3 0.45" contype="0" conaffinity="0"/>
+              </body>
+
+              <!-- 食指：MCP + PIP 两节 -->
+              <body name="finger_index" pos="0.03 -0.0375 0">
+                <joint name="index_mcp" type="hinge" axis="0 1 0" range="-0.3 1.8" damping="0.2"/>
+                <geom type="capsule" fromto="0 0 0 0.05 0 0" size="0.012" rgba="0.9 0.7 0.4 1"/>
+                <body name="finger_index_mid" pos="0.05 0 0">
+                  <joint name="index_pip" type="hinge" axis="0 1 0" range="0 2.2" damping="0.2"/>
+                  <geom type="capsule" fromto="0 0 0 0.04 0 0" size="0.011" rgba="0.9 0.65 0.35 1"/>
+                </body>
+              </body>
+
+              <!-- 中指：略长 -->
+              <body name="finger_middle" pos="0.03 -0.0125 0">
+                <joint name="middle_mcp" type="hinge" axis="0 1 0" range="-0.3 1.8" damping="0.2"/>
+                <geom type="capsule" fromto="0 0 0 0.055 0 0" size="0.0125" rgba="0.9 0.75 0.45 1"/>
+                <body name="finger_middle_mid" pos="0.055 0 0">
+                  <joint name="middle_pip" type="hinge" axis="0 1 0" range="0 2.2" damping="0.2"/>
+                  <geom type="capsule" fromto="0 0 0 0.045 0 0" size="0.0115" rgba="0.9 0.7 0.4 1"/>
+                </body>
+              </body>
+
+              <!-- 无名指 -->
+              <body name="finger_ring" pos="0.03 0.0125 0">
+                <joint name="ring_mcp" type="hinge" axis="0 1 0" range="-0.3 1.8" damping="0.2"/>
+                <geom type="capsule" fromto="0 0 0 0.05 0 0" size="0.012" rgba="0.9 0.7 0.4 1"/>
+                <body name="finger_ring_mid" pos="0.05 0 0">
+                  <joint name="ring_pip" type="hinge" axis="0 1 0" range="0 2.2" damping="0.2"/>
+                  <geom type="capsule" fromto="0 0 0 0.04 0 0" size="0.011" rgba="0.9 0.65 0.35 1"/>
+                </body>
+              </body>
+
+              <!-- 小指：最短 -->
+              <body name="finger_pinky" pos="0.03 0.0375 0">
+                <joint name="pinky_mcp" type="hinge" axis="0 1 0" range="-0.3 1.8" damping="0.2"/>
+                <geom type="capsule" fromto="0 0 0 0.04 0 0" size="0.011" rgba="0.9 0.65 0.35 1"/>
+                <body name="finger_pinky_mid" pos="0.04 0 0">
+                  <joint name="pinky_pip" type="hinge" axis="0 1 0" range="0 2.2" damping="0.2"/>
+                  <geom type="capsule" fromto="0 0 0 0.032 0 0" size="0.01" rgba="0.9 0.6 0.3 1"/>
+                </body>
+              </body>
+
+              <!-- 拇指：外展(绕 z) + 屈曲(绕 y)，可对捏四指 -->
+              <body name="thumb_base" pos="0.02 -0.05 0.02">
+                <joint name="thumb_abd" type="hinge" axis="0 0 1" range="-0.6 1.2" damping="0.2"/>
+                <geom type="capsule" fromto="0 0 0 0 -0.04 0" size="0.014" rgba="0.95 0.75 0.5 1"/>
+                <body name="thumb_tip" pos="0 -0.04 0">
+                  <joint name="thumb_flex" type="hinge" axis="0 1 0" range="-0.3 1.8" damping="0.2"/>
+                  <geom type="capsule" fromto="0 0 0 0 -0.035 0" size="0.013" rgba="0.95 0.7 0.45 1"/>
+                </body>
+              </body>
+            </body>
+          </body>
+        </body>
+      </body>
+    </body>
+  </worldbody>
+
+  <actuator>
+    <!-- ctrlrange 统一 [-1,1]，实际力矩 = ctrl * gear -->
+    <motor joint="shoulder"   ctrlrange="-1 1" gear="3.0"/>
+    <motor joint="elbow"      ctrlrange="-1 1" gear="1.5"/>
+    <motor joint="wrist_flex" ctrlrange="-1 1" gear="1.0"/>
+    <motor joint="wrist_dev"  ctrlrange="-1 1" gear="1.0"/>
+    <motor joint="index_mcp"  ctrlrange="-1 1" gear="0.4"/>
+    <motor joint="index_pip"  ctrlrange="-1 1" gear="0.35"/>
+    <motor joint="middle_mcp" ctrlrange="-1 1" gear="0.45"/>
+    <motor joint="middle_pip" ctrlrange="-1 1" gear="0.4"/>
+    <motor joint="ring_mcp"   ctrlrange="-1 1" gear="0.4"/>
+    <motor joint="ring_pip"   ctrlrange="-1 1" gear="0.35"/>
+    <motor joint="pinky_mcp"  ctrlrange="-1 1" gear="0.35"/>
+    <motor joint="pinky_pip"  ctrlrange="-1 1" gear="0.3"/>
+    <motor joint="thumb_abd"  ctrlrange="-1 1" gear="0.5"/>
+    <motor joint="thumb_flex" ctrlrange="-1 1" gear="0.45"/>
+  </actuator>
+</mujoco>
